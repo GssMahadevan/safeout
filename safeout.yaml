@@ -1,0 +1,35 @@
+description: This program ensures disk does not become full when stdout/stderr are routed to filesystem
+version: 1.0
+common:
+ c1: &c1
+  maxfiles : 1
+  maxsize  : 10_000_000
+ c2: &c2
+  maxfiles : 1
+  maxsize  : 2_000_000 
+
+perms:
+ p1: &p1
+  permFifo: "0644"
+  permFile: "0644"
+ p2: &p2
+  permFifo: "0644"
+  permFile: "0644"
+ p3: &p3
+  permFifo: "0644"
+  permFile: "0644"
+  
+safeouts:
+  gvl_server:
+    com : *c1
+    perms : *p2
+    fifoName: /data/logs/gvl_stdout.pipe
+    fileName: /data/logs/d/gvl_stdout.log
+    compress: False
+    
+  sample_server: 
+    com: *c2
+    perms: *p2
+    fifoName: /data/logs/sample_server.pipe
+    fileName: /data/logs/d/sample_server.log
+    compress: False
