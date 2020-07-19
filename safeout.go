@@ -435,6 +435,6 @@ func loadJsonCfg() {
 func main() {
 	n := Start()
 	if n > 0 {
-		safestdout.WaitForSignals()
+		WaitForSignals()
 	}
 }
