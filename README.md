@@ -7,10 +7,10 @@ While I was doing home IoT stuff on my edge-router which was running on Raspberr
  * Write simple custom use-file system (using libfuse )
  
  * Write simple go-lang program that handles the case
-   * Go approach is chose as:
-    * Can be run in multiple OSes(Windows/MAc) and multiple linux distros and kernel versions without recompile for each kernel
-    * Higher productvity
-    * Long term maintainance
+   * Finally go-approach is chosen as:
+     * Program Can be run in multiple OSes(Windows/MAc) and multiple linux distros and kernel versions without recompile for each kernel
+     * Higher productvity
+     * Long term maintainance
     
 ## Purpose
  - Safely route **stdout/stderr** from a program/daemon to disk or partition without any risk of filling up disk in case of 
