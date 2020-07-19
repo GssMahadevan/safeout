@@ -1,4 +1,4 @@
-package safestdout
+package main
 
 import (
 	"encoding/json"
@@ -429,5 +429,12 @@ func loadJsonCfg() {
 	for i := 0; i < len(cfg_info); i++ {
 		c := cfg_info[i]
 		log.Printf("%03d. cfg:%+v\n", i, c)
+	}
+}
+
+func main() {
+	n := Start()
+	if n > 0 {
+		safestdout.WaitForSignals()
 	}
 }
