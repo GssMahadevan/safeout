@@ -32,6 +32,7 @@ Sample Configuration is provided in git repo
  - [x] Allow multiple processes route theier stdout/stderr to single server via fifo/named-pipes in unix
  - [x] Ensure file size check for each process
  - [x] Have one backup file per each process/pipe combination
+ - [ ] Compress backup copies
  - [ ] Support for Windows/Mac
  - [ ] Support for multiple backup copies
  - [ ] Detect dynamic congiration changes to add new processes for this server
