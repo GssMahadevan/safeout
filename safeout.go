@@ -91,7 +91,7 @@ func init() {
 	flag.Parse()
 	// log.SetFlags(log.Llongfile | log.LstdFlags)
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-
+	runtime.GOMAXPROCS(*cpu)
 }
 
 func newStopChannel(name string) *stopChannel {
@@ -222,15 +222,15 @@ func isClosedChan(c <-chan bool) bool {
 func handleCfg(cfg_ Cfg, stopChan *stopChannel) {
 	var cfg *Cfg = &cfg_
 	defer recoverFromPanic(fmt.Sprintf("handleCfg %v", cfg))
-	// Fifo is there
-	outF := getWritableFile(cfg, true, true)
-	defer outF.Close()
 	defer safeCloseChan(stopChan)
 
+	outF := getWritableFile(cfg, true, true)
 	if outF == nil {
 		log.Printf("handleCfg can't get out file :%s", cfg.S())
 		return // TODO what to do when shutdown stopC message comes for reading?
 	}
+	defer outF.Close()
+
 	fifo := getFifo(cfg)
 	if fifo == nil {
 		log.Printf("handleCfg can't get fifo file :%s", cfg.S())
