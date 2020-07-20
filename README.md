@@ -1,6 +1,17 @@
 # safeout
 Allow unix like os programs/daemons to safely route theier stdout/stderr without filling up disk
 
+## Why
+While I was doing home IoT stuff on my edge-router which was running on Raspberry-Pi, I had an issue with third party library that spews messages when my WiFi was shutdown in night. As the stdout/stderr are routed to a file Raspberry-Pi, the log size crossed to 6GB in 12 hours. e do typically see these scenarios in real life as well. Only way out is to stop the main process , truncated log-file and restart. Few approaches  came  into mind:
+ * Write simple linux kernel module to handle a specially tagged file to handle max size case
+ * Write simple custom use-file system (using libfuse )
+ 
+ * Write simple go-lang program that handles the case
+   * Finally go-approach is chosen as:
+     * Program Can be run in multiple OSes(Windows/MAc) and multiple linux distros and kernel versions without recompile for each kernel
+     * Higher productvity
+     * Long term maintainance
+    
 ## Purpose
  - Safely route **stdout/stderr** from a program/daemon to disk or partition without any risk of filling up disk in case of 
    - rougue modules/sub-systems writing repeatedly to logs to stdout/stderr
@@ -37,6 +48,8 @@ Sample Configuration is provided in git repo
  - [ ] Support for multiple backup copies
  - [ ] Detect dynamic congiration changes to add new processes for this server
  
+## Caveat
+Even  though this program is running successfully on my  raspberry-pi for 3 days(as on 20-Jul-2020), please keep in mind that this program is in ***alpha*** version  and there could be surprizes ad bugs. So please do thorough testing it before you use this in real life production systems. I can't guarantee anything and any bad consequences of your stdout/stderr  logs are not saves/missed/etc are not my responsibility :)
 ## Issues
 Please raise issues/suggestion for improvement/pacthes at github/fork
 Please keep in mind that I do this development on my free time. So my responses might be late
