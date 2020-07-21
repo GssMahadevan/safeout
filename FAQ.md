@@ -20,3 +20,6 @@ No. You have to run the **safeout** server before user processes.
 ### Can I change safeout.yaml after *safeout* server started and expect the configuration is reread
 No. At present **safeout** program needs to be restarted for any configuration changes. Also keep in mind that, if safeout programs stops, user process might have issues as they are routing their stdout/stderr to *safeout* program.
 
+
+### Are there any prebuilt binary
+Yes. Please find them in **prebuilt-binary** directory. BTW these prebuilt binaries are stripped and compressed binaries.
