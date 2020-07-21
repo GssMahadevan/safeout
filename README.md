@@ -50,10 +50,13 @@ go build
 ```
  - Build for Raspberry-Pi (in your desktop using cross compilation)
 ```
-
+GOARCH=arm GOARM=7 go build -o safeout.a7 safeout.go 
 ```
  - In case you want smaller binary
 ```
+# for host processor binary
+GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go 
+# for cross compiled for arm.v7 binary
 GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go 
 ```
 
