@@ -38,6 +38,26 @@ Two ways one can stop this server
 ## Configuration
 Sample Configuration is provided in git repo
 
+## How to Build
+#### Prerequisitives
+ - Install latest go-lang
+#### Build
+ - Clone this repository to your desk using (here we are assuming that you are using X86_64 processor)
+```
+git clone https://github.com/GssMahadevan/safeout
+cd safeout
+go build
+```
+ - Build for Raspberry-Pi (in your desktop using cross compilation)
+```
+
+```
+ - In case you want smaller binary
+```
+GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go 
+```
+
+
 ## Features
  - [x] Safe routing of stdout/stderr to file
  - [x] Allow multiple processes route theier stdout/stderr to single server via fifo/named-pipes in unix
