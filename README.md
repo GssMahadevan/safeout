@@ -2,7 +2,7 @@
 Allow unix like os programs/daemons to safely redirect theier stdout/stderr without filling up disk
 
 ## Why
-While I was doing home IoT stuff on my edge-router which was running on Raspberry-Pi, I had an issue with third party library that spews messages when my WiFi was shutdown in night. As the stdout/stderr are redirect to a file Raspberry-Pi, the log size crossed to 6GB in 12 hours. We do typically see these scenarios in real life as well. Only way out is to stop the main process , truncate  the log-file and restart the process. Usage scenario in details blog'ed at **[my blog] (http://mahadevangorti.blogspot.com/2020/07/how-i-saved-my-raspberry-iot-edge-host.html)**
+While I was doing home IoT stuff on my edge-router which was running on Raspberry-Pi, I had an issue with third party library that spews messages when my WiFi was shutdown in night. As the stdout/stderr are redirect to a file Raspberry-Pi, the log size crossed to 6GB in 12 hours. We do typically see these scenarios in real life as well. Only way out is to stop the main process , truncate  the log-file and restart the process. Usage scenario in details blog'ed at **[my blog](http://mahadevangorti.blogspot.com/2020/07/how-i-saved-my-raspberry-iot-edge-host.html)**
 
 Few approaches  came  into mind:
  * Write simple linux kernel module to handle a specially tagged file to handle max size case
