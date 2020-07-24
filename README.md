@@ -60,7 +60,76 @@ go build -ldflags="-s -w"  -o safeout safeout.go
 GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go 
 ```
 
+## Examples
+### Example where stdout/stderr are redirectedto same file (with disk full protection)
+ - Suppose you have process named **gvl_server** that wants to create logs at **/data/logs/gvl.log** . So to configure this **safeout** daemon to handle this situation, you need to write a yaml-configuration like following:
+```
+description: This program ensures disk does not become full when stdout/stderr are routed to filesystem
+version: 1.0
+common:
+ c1: &c1
+  maxfiles : 1
+  maxsize  : 10_000_000
+perms:
+ p1: &p1
+  permFifo: "0644"
+  permFile: "0644" 
 
+safeouts:
+  gvl_server:
+    com : *c1
+    perms : *p1
+    fifoName: /data/logs/gvl.pipe
+    fileName: /data/logs/d/gvl.log
+    compress: False  
+```
+ - With above configuration  saved as safeout.yaml in PWD, start the **safeout** deamon PWD using command:
+```
+./safeout
+```
+ - Now after successful runing of **safeout** daemon, run your program **gvl_server** usinng command (here we are redirecting stderr/stdout to same fifo as mentioned in yaml file)):
+ ```
+ gvl_server >/data/logs/gvl.pipe 2>&1 
+ ```
+### Example where stdout/stderr are redirected to to different files (with disk full protection)
+ - Suppose you have process named **gvl_server** that wants to create logs  for stdout at **/data/logs/gvl_stdout.log**  and stderr at **/data/logs/gvl_stderr.log**. So to configure this **safeout** daemon to handle this situation, you need to write a yaml-configuration like following:
+```
+description: This program ensures disk does not become full when stdout/stderr are routed to filesystem
+version: 1.0
+common:
+ c1: &c1
+  maxfiles : 1
+  maxsize  : 10_000_000
+perms:
+ p1: &p1
+  permFifo: "0644"
+  permFile: "0644" 
+
+safeouts:
+  gvl_server_stdout:
+    com : *c1
+    perms : *p1
+    fifoName: /data/logs/gvl_stdout.pipe
+    fileName: /data/logs/d/gvl_stdout.log
+    compress: False  
+
+  gvl_server_stderr:
+    com : *c1
+    perms : *p1
+    fifoName: /data/logs/gvl_stderr.pipe
+    fileName: /data/logs/d/gvl_stderr.log
+    compress: False  
+    
+```
+ - With above configuration  saved as safeout.yaml in PWD, start the **safeout** deamon PWD using command:
+```
+./safeout
+```
+ - Now after successful runing of **safeout** daemon, run your program **gvl_server** usinng command (here we are redirecting stderr/stdout to different fifos as mentioned in yaml file):
+ ```
+ gvl_server >/data/logs/gvl_stdout.pipe 2> /data/logs/gvl_stderr.pipe
+ ```
+ 
 ## Features
  - [x] Safe redirect of stdout/stderr to file
  - [x] Allow multiple processes redirect their stdout/stderr to single server via fifo/named-pipes in unix
@@ -71,6 +140,13 @@ GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go
  - [ ] Support for multiple backup copies
  - [ ] Detect dynamic congiration changes to add new processes for this server
  
+## Similiar Tools
+There are some similir tools in Unix world named multilog,tinylog,cyclog,s6-log,svlogd,etc. You can see more on at http://zpz.github.io/blog/log-rotation-of-stdout/ . 
+
+How this program differs from those tools:
+ * Ability to handle stdout/stderr of a process with disk protection
+ * User application simple redirect the stderr/stdout to a fifo that is configured in yaml file (so whole application commans looks normal in ps tools and application is not as child of multilog/tinylog/etc)
+ * Ability of single **safeout** program to handle multiple processes(and theier stdout/stderr combindely/seperately)
 ## Caveat
 Even  though this program is running successfully on my  raspberry-pi for 3 days(as on 20-Jul-2020), please keep in mind that this program is in ***alpha*** version  and there could be surprizes and bugs. So please do thorough testing it before you deploy this in real life production systems. I can't guarantee anything and any bad consequences of your stdout/stderr  logs are not redirected/saved/missed/etc are not my responsibility :)
 ## Issues
