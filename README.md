@@ -40,7 +40,7 @@ user_program  2>&1 | safeout --outfile output.log --outmax 500000
 ```
 ## Start server to handle multiple user programs using single instance of safeout
 - With default yaml configuration file named **safeout.yaml** in  PWD
-```
+```bash
  safeout
  ```
 - With yaml  yaml configuration file located at  **/tmp/safeout.yaml** 
@@ -67,7 +67,7 @@ cd safeout
 go build
 ```
  - Build for Raspberry-Pi (in your desktop using cross compilation)
-```
+```bash
 GOARCH=arm GOARM=7 go build -o safeout.a7 safeout.go 
 ```
  - In case you want smaller binary
@@ -102,11 +102,11 @@ safeouts:
     compress: False  
 ```
  - With above configuration  saved as safeout.yaml in PWD, start the **safeout** deamon PWD using command:
-```
+```bash
 ./safeout
 ```
  - Now after successful runing of **safeout** daemon, run your program **gvl_server** usinng command (here we are redirecting stderr/stdout to same fifo as mentioned in yaml file)):
- ```
+ ```bash
  gvl_server >/data/logs/gvl.pipe 2>&1 
  ```
 ### Example where stdout/stderr are redirected to to different files (with disk full protection)
