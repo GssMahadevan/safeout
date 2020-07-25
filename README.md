@@ -24,13 +24,29 @@ Few approaches  came  into mind:
    - allow multiple user programs using this single **safeout** program to route safely to multiple disk locations
    
 ## Design and Concept
-This program is written using go-language. This **safeout** daemon/program creates one fifo(ie., named pipe) per user process (user can create one fifo for stdout and one fifo for stderr also)  and goes on listening for data from the fifo(s). Once data from fifo is read, the daemon will redirect the messages to  user configured log-file (with configured maximum size checks on this log file) for a given fifo. Once the log-file of specific user process is reached maximum size, this daemon renames the log-file to  backup-copy for that specific process and restart log-file the user process from start. With this check, user-process logs never crosses 2 * max-size-confgured for a specifc process ( i.e., including backup copy size ), there by saving uncontrolled disk-full in case of direct stdout/stderr messages redirected to disk
+This program is written using go-language. This **safeout** daemon/program creates one fifo(ie., named pipe) per user process (user can create one fifo for stdout and one fifo for stderr also)  and goes on listening for data from the fifo(s). Once data from fifo is read, the daemon will redirect the messages to  user configured log-file (with configured maximum size checks on this log file) for a given fifo. Once the log-file of specific user process is reached maximum size, this daemon renames the log-file to  backup-copy for that specific process and restart log-file the user process from start. With this check, user-process logs never crosses 2 * max-size-confgured for a specifc process ( i.e., including backup copy size ), there by saving uncontrolled disk-full in case of direct stdout/stderr messages redirected to disk.
 
-## Start server
+For simpler traditional unix stdin redirect cases (like multilog,s6,etc), **safeout** also supports similiar behaviour. But in this case, one needs to **run multiple instances** of **safeout** instances for each program. 
+
+## Simple traditional unix pipe redirection (1 safeout instance per one user program redirection)
+ - To ensure that **user_program** output.log never crosses 500000 bytes (and have one backup named 'output.log.backup')
+```
+user_program | safeout --outfile output.log --outmax 500000 
+```
+
+- To ensure that **user_program** output.log never crosses 500000 bytes (and have one backup named 'output.log.backup') for both stdout/stderr
+```
+user_program  2>&1 | safeout --outfile output.log --outmax 500000 
+```
+## Start server to handle multiple user programs using single instance of safeout
 - With default yaml configuration file named **safeout.yaml** in  PWD
-  * safeout
+```
+ safeout
+ ```
 - With yaml  yaml configuration file located at  **/tmp/safeout.yaml** 
-  * safeout --cfg /tmp/safeout.yaml
+```
+safeout --cfg /tmp/safeout.yaml
+```
   
 ## Stop server
 Two ways one can stop this server
