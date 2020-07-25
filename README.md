@@ -162,9 +162,12 @@ safeouts:
 There are some similir tools in Unix world named multilog,tinylog,cyclog,s6-log,svlogd,etc. You can see more on at http://zpz.github.io/blog/log-rotation-of-stdout/ . 
 
 How this program differs from those tools:
- * Ability to handle stdout/stderr of a process with disk protection
- * User application simple redirect the stderr/stdout to a fifo that is configured in yaml file (so whole application commans looks normal in ps tools and application is not as child of multilog/tinylog/etc)
- * Ability of single **safeout** program to handle multiple processes(and theier stdout/stderr combindely/seperately)
+ * Ability to handle stdout/stderr of a process with disk fill protection **in realtime at low cost**
+ * User application simple redirect the stderr/stdout to a fifo that is configured in yaml file
+ * Ability of **single safeout** program  **to handle multiple processes**(and their stdout/stderr combindly/seperately)
+  * Traditional unix damons tools like multilog,s6, etc always have 1:1 mapping (i.e., 1 user process redirection needs one multilog process)
+ * Ability to handle stdout/stderr in seperately/combindely  w.r.t. multilog/s6,etc. 
+ * Application command without any pipe redirections (as needed for s6, multilog, etc). Such redirection might not work in some instances (like ```os.system(cmd)``` )and one needs to wrap the application in shell-script to handle such scenarios. Anyhow this issue might not be major one.
 ## Caveat
 Even  though this program is running successfully on my  raspberry-pi for 3 days(as on 20-Jul-2020), please keep in mind that this program is in ***alpha*** version  and there could be surprizes and bugs. So please do thorough testing it before you deploy this in real life production systems. I can't guarantee anything and any bad consequences of your stdout/stderr  logs are not redirected/saved/missed/etc are not my responsibility :)
 ## Issues
