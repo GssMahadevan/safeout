@@ -27,11 +27,18 @@ const (
 )
 
 var (
-	cfg   = flag.String("cfg", "./safeout.yaml", "Json file for all safestdout fifo files & related config")
-	cpu   = flag.Int("cpu", getSafeCpuCount(), "Max cpus to be used for writing/reading logs")
-	watch = flag.Bool("watch", false, "Watch configuration file for changes") //TODO
-	toutS = flag.Int("toutS", 2, "Read timeout for channel read in shutdown")
+	cfg     = flag.String("cfg", "./safeout.yaml", "Json file for all safestdout fifo files & related config")
+	cpu     = flag.Int("cpu", getSafeCpuCount(), "Max cpus to be used for writing/reading logs")
+	watch   = flag.Bool("watch", false, "Watch configuration file for changes") //TODO
+	toutMs  = flag.Int("toutS", 500, "Read timeout for channel read in shutdown")
+	verbose = flag.Bool("verbose", false, "Verbose log messages") //TODO
 
+	outperms = flag.String("outperms", "0644", "Outfile's permissions  for monitoring stdin for log rotate without yaml configuration")
+	outfile  = flag.String("outfile", "", `Outfile for monitoring stdin for log rotate without yaml configuration\n
+	But each program needs to run extra instance of 'safeout' program
+	`)
+
+	outMax  = flag.Int("outmax", 10_000_000, "Maximum outfile size")
 	bufsize = flag.Int("bufsize", 8192, "Buf size for writing to regular file")
 	// perms_re = regexp.MustCompile("^0[0-7]{3}$|^0o[0-7]{3}$")
 	perms_re = regexp.MustCompile("^0[0-7]{3}$")
@@ -44,8 +51,9 @@ var (
 )
 
 type stopChannel struct {
-	name string
-	ch   chan bool
+	name     string
+	isClosed bool
+	ch       chan bool
 }
 type Cfg0 struct {
 	FifoName  string `json:"name"`     // Fifo file  path on which  stdout/stderr are routed by client processes and this go process reads
@@ -95,7 +103,7 @@ func init() {
 }
 
 func newStopChannel(name string) *stopChannel {
-	r := &stopChannel{name: name}
+	r := &stopChannel{name: name, isClosed: false}
 	r.ch = make(chan bool, 1)
 	return r
 }
@@ -116,11 +124,15 @@ func Start() int {
 func WaitForSignals() {
 	setSignalHandler(done)
 	<-done
-	log.Printf("Signalling Shutting down ...")
+	if *verbose {
+		log.Printf("Signalling Shutting down ...")
+	}
 	active = false
 	safeStdOutStop()
 	time.Sleep(5 * time.Second)
-	log.Printf(" finished shutdown\n")
+	if *verbose {
+		log.Printf(" finished shutdown\n")
+	}
 }
 
 func safeStdOutStart() int {
@@ -128,14 +140,15 @@ func safeStdOutStart() int {
 	loadYamlCfg()
 	siz := len(cfg_info)
 	cnt := 0
-	if siz == 0 {
-		log.Printf("No config file entries to monitor\n")
-		return 0
-	}
+	// if siz == 0 {
+	// 	log.Printf("No config file entries to monitor\n")
+	// 	// return 0
+	// }
 	for i := 0; i < siz; i++ {
 		sc := newStopChannel(cfg_info[i].S())
 		stopC = append(stopC, sc)
 	}
+
 	for i, cfg := range cfg_info {
 		if !ensureFifo(&cfg) {
 			continue
@@ -143,17 +156,28 @@ func safeStdOutStart() int {
 		cnt++
 		go handleCfg(cfg, stopC[i])
 	}
+	if "" != *outfile { // handle outfile in case simple safeout execution like old unix pipe stuff
+		sc := newStopChannel(*outfile)
+		stopC = append(stopC, sc)
+		cnt++
+		go handleStdin(*outfile, *outperms, sc)
+
+	}
 	return cnt
 }
 
 func loadYamlCfg() {
 	yml, err := ioutil.ReadFile(*cfg)
 	if err != nil {
-		log.Fatalf("can't loadYamlCfg '%s',  err:%v\n", *cfg, err)
+		if *verbose {
+			log.Printf("can't loadYamlCfg '%s',  err:%v\n", *cfg, err)
+		}
 	}
 	err = yaml.Unmarshal(yml, &config)
 	if err != nil {
-		log.Fatalf("loadYamlCfg  can't Unmarshal yaml '%s',  err:%v\n", *cfg, err)
+		if *verbose {
+			log.Printf("loadYamlCfg  can't Unmarshal yaml '%s',  err:%v\n", *cfg, err)
+		}
 	}
 
 	for k, v_ := range config.Cfgs {
@@ -171,7 +195,9 @@ func setSignalHandler(done chan bool) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		sig := <-sigs
-		log.Printf("Got signal %v\n", sig)
+		if *verbose {
+			log.Printf("Got signal %v\n", sig)
+		}
 		done <- true
 	}()
 }
@@ -183,17 +209,23 @@ func safeStdOutStop() {
 
 func safeCloseChan(stopChan *stopChannel) {
 	recoverFromPanic(fmt.Sprintf("safeCloseChan_%s", stopChan.name))
-	log.Printf("safeCloseChan for:%s, %p", stopChan.name, stopChan.ch)
-	close(stopChan.ch)
+	if *verbose {
+		log.Printf("safeCloseChan for:%s, %p", stopChan.name, stopChan.ch)
+	}
+	if !stopChan.isClosed {
+		close(stopChan.ch)
+	}
 
 }
 func sendSafeShutMsg(i int, stopChan *stopChannel) {
 	recoverFromPanic(fmt.Sprintf("sendSafeShutMsg_%s", stopChan.name))
-	log.Printf("sendSafeShutMsg stopChan:%s, chan:%p", stopChan.name, stopChan.ch)
+	if *verbose {
+		log.Printf("sendSafeShutMsg stopChan:%s, chan:%p", stopChan.name, stopChan.ch)
+	}
 	select {
 	case stopChan.ch <- true:
-	case <-time.After(time.Duration(*toutS) * time.Second):
-		log.Printf("sendSafeShutMsg got timeout %d sec", *toutS)
+	case <-time.After(time.Duration(*toutMs) * time.Millisecond):
+		log.Printf("sendSafeShutMsg got timeout %d sec", *toutMs)
 	}
 }
 
@@ -204,7 +236,10 @@ func recoverFromPanic(ctx string) {
 }
 
 func getSize(cfg *Cfg) int64 {
-	finfo, err := os.Stat(cfg.FileName)
+	return getSize0((cfg.FileName))
+}
+func getSize0(fileName string) int64 {
+	finfo, err := os.Stat(fileName)
 	if err != nil {
 		//log.Printf("can't do state")
 		return -1
@@ -276,7 +311,7 @@ OUT:
 		}
 		if n > 0 {
 
-			if !writen(outF, buf, n, cfg) {
+			if !writen(outF, buf, n, cfg.FileName) {
 				break OUT
 			}
 
@@ -294,10 +329,94 @@ OUT:
 
 		}
 	}
-	log.Printf("handleCfg exiting stopChan  %s, ptr:%p", stopChan.name, stopChan.ch)
+	stopChan.isClosed = true
+	if *verbose {
+		log.Printf("handleCfg exiting stopChan  %s, ptr:%p", stopChan.name, stopChan.ch)
+	}
 }
 
-func writen(outF *os.File, buf []byte, n int, cfg *Cfg) bool {
+func handleStdin(fileName, filePerm string, stopChan *stopChannel) {
+	defer recoverFromPanic("handleStdin")
+	defer safeCloseChan(stopChan)
+
+	outF := getWritableFile0(fileName, filePerm, true, true)
+	if outF == nil {
+		log.Printf("handleCfg can't get out file :%s", fileName)
+		return // TODO what to do when shutdown stopC message comes for reading?
+	}
+	defer outF.Close()
+
+	stdin := os.Stdin
+	if stdin == nil {
+		log.Printf("handleCfg can't get file :%s")
+		return // TODO what to do when shutdown stopC message comes for reading?
+	}
+	defer stdin.Close()
+
+	buf := make([]byte, *bufsize)
+
+	n := 0
+	var err error
+	var fSize int64 = getSize0(fileName)
+
+	if fSize < 0 {
+		log.Printf("can't stat the file:%s", fileName)
+		return
+	}
+
+	lp := 0
+OUT:
+	for {
+		if !active {
+			break
+		}
+		lp++
+
+		// stdin = ensureFifoOpen(&fifoEof, stdin, cfg)
+		// if stdin == nil {
+		// 	break OUT
+		// }
+		select {
+		case <-stopChan.ch:
+			log.Printf("handleCfg got shutdown msg:%s", stopChan.name)
+			break OUT
+		default:
+			n, err = stdin.Read(buf)
+		}
+		if err == io.EOF {
+			break
+		}
+
+		if os.IsTimeout(err) {
+			continue
+		}
+		if n > 0 {
+
+			if !writen(outF, buf, n, fileName) {
+				break OUT
+			}
+
+			fSize += int64(n)
+			if fSize > int64(*outMax) {
+				outF.Close()
+				renameFile0(fileName)
+				outF = getWritableFile0(fileName, filePerm, false, true)
+				if outF == nil {
+					log.Printf("can't reopen file for writing %s\n", fileName)
+					break OUT
+				}
+				fSize = 0
+			}
+
+		}
+	}
+	stopChan.isClosed = true
+	if *verbose {
+		log.Printf("handleCfg exiting stopChan  %s, ptr:%p", stopChan.name, stopChan.ch)
+	}
+}
+
+func writen(outF *os.File, buf []byte, n int, fileName string) bool {
 	off := 0
 	nleft := n
 	for nleft > 0 {
@@ -311,7 +430,7 @@ func writen(outF *os.File, buf []byte, n int, cfg *Cfg) bool {
 			}
 			continue
 		} else if err != nil {
-			log.Printf("Can't write to file :%s, err:%v, nw:%d\n", cfg.FileName, err, nW)
+			log.Printf("Can't write to file :%s, err:%v, nw:%d\n", fileName, err, nW)
 			return false
 		}
 		off += nW
@@ -319,13 +438,14 @@ func writen(outF *os.File, buf []byte, n int, cfg *Cfg) bool {
 	}
 	return true
 }
-
 func renameFile(cfg *Cfg) bool {
-	fn := cfg.FileName
+	return renameFile0(cfg.FileName)
+}
+func renameFile0(fn string) bool {
 	backupName := fmt.Sprintf("%s.backup", fn)
 	err := os.Rename(fn, backupName)
 	if err != nil {
-		log.Printf("can't rename file %s, err:%v\n", cfg.S(), err)
+		log.Printf("can't rename file %s, err:%v\n", fn, err)
 		// runScript() //TODO removed this script
 		return false
 	}
@@ -395,7 +515,10 @@ func getFifo(cfg *Cfg) (f *os.File) {
 	return f
 }
 func getWritableFile(cfg *Cfg, isAppend, isCreate bool) (f *os.File) {
-	p := os.FileMode(getPerm(cfg.PermsFile, cfg.FileName))
+	return getWritableFile0(cfg.FileName, cfg.PermsFile, isAppend, isCreate)
+}
+func getWritableFile0(fileName, permsFile string, isAppend, isCreate bool) (f *os.File) {
+	p := os.FileMode(getPerm(permsFile, fileName))
 	mode := os.O_WRONLY
 	if isAppend {
 		mode |= os.O_APPEND
@@ -403,9 +526,9 @@ func getWritableFile(cfg *Cfg, isAppend, isCreate bool) (f *os.File) {
 	if isCreate {
 		mode |= os.O_CREATE
 	}
-	f, err := os.OpenFile(cfg.FileName, mode, p)
+	f, err := os.OpenFile(fileName, mode, p)
 	if err != nil {
-		log.Printf("Can't get writable file for:%+v, mode:%v, err:%v\n", cfg, mode, err)
+		log.Printf("Can't get writable file for:%+v, mode:%v, err:%v\n", fileName, mode, err)
 		return nil
 	}
 	return f
