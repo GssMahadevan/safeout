@@ -30,12 +30,12 @@ For simpler traditional unix stdin redirect cases (like multilog,s6,etc), **safe
 
 ## Simple traditional unix pipe redirection (1 safeout instance per one user program redirection)
  - To ensure that **user_program** output.log never crosses 500000 bytes (and have one backup named 'output.log.backup')
-```
+```bash
 user_program | safeout --outfile output.log --outmax 500000 
 ```
 
 - To ensure that **user_program** output.log never crosses 500000 bytes (and have one backup named 'output.log.backup') for both stdout/stderr
-```
+```bash
 user_program  2>&1 | safeout --outfile output.log --outmax 500000 
 ```
 ## Start server to handle multiple user programs using single instance of safeout
@@ -44,7 +44,7 @@ user_program  2>&1 | safeout --outfile output.log --outmax 500000
  safeout
  ```
 - With yaml  yaml configuration file located at  **/tmp/safeout.yaml** 
-```
+```bash
 safeout --cfg /tmp/safeout.yaml
 ```
   
@@ -61,7 +61,7 @@ Sample Configuration is provided in git repo
  - Install latest go-lang
 #### Build
  - Clone this repository to your desk using (here we are assuming that you are using X86_64 processor)
-```
+```bash
 git clone https://github.com/GssMahadevan/safeout
 cd safeout
 go build
@@ -71,7 +71,7 @@ go build
 GOARCH=arm GOARM=7 go build -o safeout.a7 safeout.go 
 ```
  - In case you want smaller binary
-```
+```bash
 # for host processor binary
 go build -ldflags="-s -w"  -o safeout safeout.go 
 # for cross compiled for arm.v7 binary
@@ -81,7 +81,7 @@ GOARCH=arm GOARM=7 go build -ldflags="-s -w"  -o safeout.a7 safeout.go
 ## Examples
 ### Example where stdout/stderr are redirectedto same file (with disk full protection)
  - Suppose you have process named **gvl_server** that wants to create logs at **/data/logs/gvl.log** . So to configure this **safeout** daemon to handle this situation, you need to write a yaml-configuration like following:
-```
+```yaml
 description: This program ensures disk does not become full when stdout/stderr are routed to filesystem
 version: 1.0
 common:
@@ -111,7 +111,7 @@ safeouts:
  ```
 ### Example where stdout/stderr are redirected to to different files (with disk full protection)
  - Suppose you have process named **gvl_server** that wants to create logs  for stdout at **/data/logs/gvl_stdout.log**  and stderr at **/data/logs/gvl_stderr.log**. So to configure this **safeout** daemon to handle this situation, you need to write a yaml-configuration like following:
-```
+```yaml
 description: This program ensures disk does not become full when stdout/stderr are routed to filesystem
 version: 1.0
 common:
@@ -140,11 +140,11 @@ safeouts:
     
 ```
  - With above configuration  saved as safeout.yaml in PWD, start the **safeout** deamon PWD using command:
-```
+```bash
 ./safeout
 ```
  - Now after successful runing of **safeout** daemon, run your program **gvl_server** usinng command (here we are redirecting stderr/stdout to different fifos as mentioned in yaml file):
- ```
+ ```bash
  gvl_server >/data/logs/gvl_stdout.pipe 2> /data/logs/gvl_stderr.pipe
  ```
  
